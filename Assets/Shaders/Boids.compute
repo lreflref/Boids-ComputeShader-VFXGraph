@@ -1,0 +1,63 @@
+#pragma kernel Boids
+
+struct BoidBoids{
+    float3 position;
+    float3 forward;
+};
+
+
+RWStructuredBuffer<BoidBoids> _boidBoids;
+
+
+int numBoid;
+
+float3 targetP;                                                                                                                                                                                                                                                                                            
+
+float alignWeight;
+float separationWeight;
+float targetWeight;
+
+float speed;
+
+float deltaTime;
+
+float3 normalizeSafe(float3 v)
+{
+    return length(v) > 0 ? normalize(v) : 0;
+}
+
+
+[numthreads(128,1,1)]
+void Boids (uint3 id : SV_DispatchThreadID)
+{
+
+   
+   BoidBoids boidthis =  _boidBoids[id.x];
+
+
+   float3 alignTotal = 0;
+    float3 separateTotal = 0;
+
+  
+
+    for(int i = 0; i<numBoid; i++){
+       alignTotal += _boidBoids[i].forward;
+       separateTotal += _boidBoids[i].position;
+    }
+
+    float3 align = normalizeSafe((alignTotal/numBoid) - boidthis.forward) * alignWeight;
+    float3 separate = normalizeSafe((boidthis.position/ numBoid) - separateTotal) * separationWeight;
+    float3 target = normalizeSafe(targetP - boidthis.position) * targetWeight;
+
+    float3 heading = normalizeSafe(align + separate + target);
+
+    boidthis.forward = normalizeSafe(boidthis.forward + deltaTime * (heading - boidthis.forward));
+
+    boidthis.position += _boidBoids[id.x].forward * speed * deltaTime;
+
+    
+    _boidBoids[id.x] = boidthis;
+
+    
+}
+
